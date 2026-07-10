@@ -1,2 +1,3 @@
-python-telegram-bot==20.7setuptools
-mistralai==0.1.3
+setuptools
+python-telegram-bot==21.0
+mistralai>=1.0.0
