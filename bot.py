@@ -1,8 +1,9 @@
+
 import os
 import logging
+import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from mistralai import Mistral
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -12,8 +13,23 @@ logger = logging.getLogger(__name__)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 
-# 初始化 Mistral 客户端
-client = Mistral(api_key=MISTRAL_API_KEY)
+# Mistral API 地址
+MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"
+
+def call_mistral(user_message):
+    headers = {
+        "Authorization": f"Bearer {MISTRAL_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "mistral-small-latest",
+        "messages": [
+            {"role": "user", "content": user_message}
+        ]
+    }
+    response = requests.post(MISTRAL_API_URL, headers=headers, json=data)
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("你好！我是AI助手，发消息给我吧！")
@@ -21,13 +37,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
     try:
-        response = client.chat.complete(
-            model="mistral-small-latest",
-            messages=[
-                {"role": "user", "content": user_message}
-            ]
-        )
-        reply = response.choices[0].message.content
+        reply = call_mistral(user_message)
         await update.message.reply_text(reply)
     except Exception as e:
         logger.error(f"Error: {e}")
